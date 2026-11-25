@@ -1,0 +1,101 @@
+import time
+import paho.mqtt.client as mqtt
+
+OPISKELIJATUNNUS = "2406758"
+
+MQTT_BROKER = "iot.research.hamk.fi"
+MQTT_PORT = 1883
+
+TOPIC_LAMPOTILA = f"HAMK/Fo/DHT22/{OPISKELIJATUNNUS}/lampotila"
+TOPIC_KOSTEUS = f"HAMK/Fo/DHT22/{OPISKELIJATUNNUS}/kosteus"
+
+MITTAUSVALI_SEKUNTIA = 10
+DHT_PINNI = 4  # Tarkista FoCar-kytkennästäsi oikea pinni
+
+
+def lue_dht22():
+    """
+    Lukee lämpötilan (°C) ja suhteellisen kosteuden (%).
+    Korvaa tämä FoCar-ympäristössäsi käytössä olevalla DHT-22-lukukoodilla.
+    """
+    # Esimerkki (Adafruit_DHT):
+    # import Adafruit_DHT
+    # kosteus, lampotila = Adafruit_DHT.read_retry(22, DHT_PINNI)
+    # return lampotila, kosteus
+
+    raise NotImplementedError(
+        "Lisää lue_dht22()-funktioon FoCar-ympäristösi DHT-22-lukukoodi."
+    )
+
+
+def luo_mqtt_asiakas():
+    try:
+        client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
+    except AttributeError:
+        client = mqtt.Client()
+
+    client.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)
+    client.loop_start()
+    return client
+
+
+def main():
+    client = luo_mqtt_asiakas()
+
+    edellinen_lampotila = None
+    edellinen_kosteus = None
+
+    print(f"Käynnistetään DHT-22-seuranta (väli: {MITTAUSVALI_SEKUNTIA} s)...")
+    print(f"Broker: {MQTT_BROKER}:{MQTT_PORT}")
+    print(f"Aiheet: {TOPIC_LAMPOTILA} | {TOPIC_KOSTEUS}\n")
+
+    try:
+        while True:
+            lampotila, kosteus = lue_dht22()
+
+            if lampotila is None or kosteus is None:
+                print("Virhe anturin luvussa: tyhjä arvo. MQTT-viestiä ei lähetetty.")
+            else:
+                lampotila = round(float(lampotila), 1)
+                kosteus = round(float(kosteus), 1)
+
+                lampotila_muuttunut = lampotila != edellinen_lampotila
+                kosteus_muuttunut = kosteus != edellinen_kosteus
+
+                if lampotila_muuttunut:
+                    client.publish(TOPIC_LAMPOTILA, str(lampotila), qos=0, retain=False)
+                    edellinen_lampotila = lampotila
+
+                if kosteus_muuttunut:
+                    client.publish(TOPIC_KOSTEUS, str(kosteus), qos=0, retain=False)
+                    edellinen_kosteus = kosteus
+
+                viesti_lahetetty = lampotila_muuttunut or kosteus_muuttunut
+
+                if viesti_lahetetty:
+                    lahetetyt = []
+                    if lampotila_muuttunut:
+                        lahetetyt.append(f"lämpötila -> {TOPIC_LAMPOTILA}")
+                    if kosteus_muuttunut:
+                        lahetetyt.append(f"kosteus -> {TOPIC_KOSTEUS}")
+                    print(
+                        f"Lämpötila: {lampotila} °C | Kosteus: {kosteus} % | "
+                        f"MQTT lähetetty: KYLLÄ ({', '.join(lahetetyt)})"
+                    )
+                else:
+                    print(
+                        f"Lämpötila: {lampotila} °C | Kosteus: {kosteus} % | "
+                        f"MQTT lähetetty: EI (ei muutosta edelliseen mittaukseen)"
+                    )
+
+            time.sleep(MITTAUSVALI_SEKUNTIA)
+
+    except KeyboardInterrupt:
+        print("\nOhjelma pysäytetty käyttäjän toimesta.")
+    finally:
+        client.loop_stop()
+        client.disconnect()
+
+
+if __name__ == "__main__":
+    main()
