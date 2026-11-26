@@ -1,8 +1,8 @@
 import time
 import paho.mqtt.client as mqtt
 
+# Filled in for you
 OPISKELIJATUNNUS = "2406758"
-
 MQTT_BROKER = "iot.research.hamk.fi"
 MQTT_PORT = 1883
 
@@ -10,21 +10,30 @@ TOPIC_LAMPOTILA = f"HAMK/Fo/DHT22/{OPISKELIJATUNNUS}/lampotila"
 TOPIC_KOSTEUS = f"HAMK/Fo/DHT22/{OPISKELIJATUNNUS}/kosteus"
 
 MITTAUSVALI_SEKUNTIA = 10
-DHT_PINNI = 4  # Tarkista FoCar-kytkennästäsi oikea pinni
+
+# Check which GPIO pin your DHT-22 is wired to on FoCar
+DHT_PINNI = 4
 
 
 def lue_dht22():
     """
-    Lukee lämpötilan (°C) ja suhteellisen kosteuden (%).
-    Korvaa tämä FoCar-ympäristössäsi käytössä olevalla DHT-22-lukukoodilla.
+    Returns (temperature_c, humidity_pct).
+    Fill in the sensor-reading lines below for your FoCar setup.
     """
-    # Esimerkki (Adafruit_DHT):
+    # --- FILL IN YOUR SENSOR READ CODE HERE ---
+    # Example A (older Adafruit_DHT):
     # import Adafruit_DHT
     # kosteus, lampotila = Adafruit_DHT.read_retry(22, DHT_PINNI)
     # return lampotila, kosteus
+    #
+    # Example B (CircuitPython adafruit_dht on GPIO):
+    # import board
+    # import adafruit_dht
+    # dht = adafruit_dht.DHT22(board.D4)
+    # return dht.temperature, dht.humidity
 
     raise NotImplementedError(
-        "Lisää lue_dht22()-funktioon FoCar-ympäristösi DHT-22-lukukoodi."
+        "Fill in lue_dht22() with the DHT-22 read code used in your FoCar environment."
     )
 
 
@@ -33,6 +42,9 @@ def luo_mqtt_asiakas():
         client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
     except AttributeError:
         client = mqtt.Client()
+
+    # If your broker requires username/password, uncomment and fill in:
+    # client.username_pw_set("USERNAME", "PASSWORD")
 
     client.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)
     client.loop_start()
